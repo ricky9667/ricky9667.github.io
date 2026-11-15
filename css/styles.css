@@ -1,0 +1,714 @@
+/* ==========================================================================
+   HUSH Cubing Apps
+   1. Tokens   2. Base   3. Backdrop   4. Layout   5. Header   6. Hero
+   7. Apps grid and cards   8. Footer   9. Reveal animation   10. Media queries
+   ========================================================================== */
+
+/* 1. Tokens
+   ========================================================================== */
+:root {
+  --bg: #09090b;
+  --surface: #101012;
+  --surface-hover: #151518;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --fg: #f4f4f5;
+  --muted: #8e8e96;
+  --dim: #5c5c63;
+
+  /* One cube face per project card */
+  --cube-white: #f4f4f5;
+  --cube-yellow: #f2d04b;
+  --cube-red: #ef5b54;
+  --cube-orange: #f59a3d;
+  --cube-blue: #5a9cf2;
+  --cube-green: #4fcf8b;
+
+  --font-display: "Rubik", system-ui, sans-serif;
+  --font-body: "Poppins", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --gutter: 24px;
+}
+
+/* 2. Base
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+ul {
+  margin: 0;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+}
+
+img {
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.sprite {
+  display: none;
+}
+
+/* Inline icons drawn from the SVG sprite in index.html */
+.glyph {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+}
+
+.glyph--stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 3. Backdrop: faint sticker grid and a soft glow, both fading out from the top
+   ========================================================================== */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+}
+
+body::before {
+  inset: 0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: center top;
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 0%, transparent 75%);
+  opacity: 0.55;
+}
+
+body::after {
+  top: -30vh;
+  left: 50%;
+  width: 90vw;
+  height: 70vh;
+  translate: -50% 0;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.07), transparent);
+  animation: breathe 9s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.55;
+    scale: 1.06;
+  }
+}
+
+/* 4. Layout
+   ========================================================================== */
+.container {
+  width: min(1120px, 100% - var(--gutter) * 2);
+  margin-inline: auto;
+}
+
+/* 5. Header
+   ========================================================================== */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 0;
+}
+
+/* The logo PNG also contains a light outline behind its black square. It is
+   cropped well inside the square so none of that can show at the rim, and the
+   border is drawn in CSS instead. */
+.logo-tile {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 19%;
+  background: #000;
+}
+
+.logo-tile img {
+  position: absolute;
+  top: -37.7%;
+  left: -37.7%;
+  width: 175.4%;
+  height: 175.4%;
+  max-width: none;
+}
+
+/* Brand: hovering, focusing or long-pressing expands "HUSH" into the WCA ID
+   and swaps the logo for the WCA mark. --reveal (0 or 1) drives every part. */
+.brand {
+  --reveal: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.brand:is(.is-open, :focus-visible) {
+  --reveal: 1;
+}
+
+@media (hover: hover) {
+  .brand:hover {
+    --reveal: 1;
+  }
+}
+
+.brand__icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+}
+
+.brand__logo,
+.brand__wca {
+  transition: opacity 0.4s var(--ease-out), transform 0.6s var(--ease-out);
+}
+
+.brand__logo {
+  width: 100%;
+  border-radius: 8px;
+  opacity: calc(1 - var(--reveal));
+  transform: rotate(calc(var(--reveal) * 120deg)) scale(calc(1 - var(--reveal) * 0.5));
+}
+
+.brand__wca {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: var(--reveal);
+  transform: rotate(calc((var(--reveal) - 1) * 120deg)) scale(calc(0.5 + var(--reveal) * 0.5));
+}
+
+.brand__text {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.brand__affix {
+  display: inline-block;
+  max-width: calc(var(--reveal) * 3em);
+  overflow: hidden;
+  opacity: var(--reveal);
+  color: var(--muted);
+  transition: max-width 0.55s var(--ease-out), opacity 0.4s var(--ease-out);
+}
+
+.social {
+  display: flex;
+  gap: 8px;
+}
+
+.social__link {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 17px;
+  transition:
+    color 0.25s,
+    border-color 0.25s,
+    background-color 0.25s,
+    transform 0.45s var(--ease-out);
+}
+
+.social__link:is(:hover, :focus-visible) {
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+  transform: translateY(-2px);
+}
+
+/* 6. Hero
+   ========================================================================== */
+.hero {
+  padding: clamp(40px, 9vh, 96px) 0 clamp(56px, 10vh, 104px);
+  text-align: center;
+}
+
+.hero__mark {
+  --ring-inset: 26px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 148px;
+  height: 148px;
+  margin: 0 auto 36px;
+}
+
+.hero__logo {
+  width: 62%;
+  box-shadow: 0 0 60px rgba(255, 255, 255, 0.08);
+  transition: transform 0.6s var(--ease-out);
+}
+
+.hero__mark:hover .hero__logo {
+  transform: rotate(-8deg) scale(1.05);
+}
+
+/* Rotating outlines echoing the tilted outline in the original logo */
+.hero__ring {
+  position: absolute;
+  inset: var(--ring-inset);
+  rotate: 30deg;
+  border: 1px solid var(--line-strong);
+  border-radius: 26%;
+  animation: spin 28s linear infinite;
+}
+
+.hero__ring:nth-child(2) {
+  inset: 12px;
+  opacity: 0.55;
+  animation-duration: 44s;
+  animation-direction: reverse;
+}
+
+.hero__ring:nth-child(3) {
+  inset: -4px;
+  opacity: 0.28;
+  animation-duration: 64s;
+}
+
+@keyframes spin {
+  to {
+    rotate: 390deg;
+  }
+}
+
+.hero__title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 7.2vw, 5rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.hero__title span {
+  color: var(--muted);
+}
+
+.hero__lede {
+  max-width: 34rem;
+  margin: 20px auto 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 1.6vw, 1.125rem);
+  text-wrap: pretty;
+}
+
+.scramble {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 100%;
+  margin-top: 36px;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.scramble__label {
+  color: var(--dim);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.scramble__moves {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scramble__button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.25s, border-color 0.25s, rotate 0.5s var(--ease-out);
+}
+
+.scramble__button:hover {
+  border-color: var(--line-strong);
+  color: var(--fg);
+  rotate: 90deg;
+}
+
+/* 7. Apps grid and cards
+   ========================================================================== */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.section-head__title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.section-head__count {
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.card {
+  --face: var(--cube-white);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 260px;
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  transition:
+    transform 0.45s var(--ease-out),
+    border-color 0.35s,
+    background-color 0.35s;
+}
+
+.card[data-face="yellow"] { --face: var(--cube-yellow); }
+.card[data-face="red"]    { --face: var(--cube-red); }
+.card[data-face="orange"] { --face: var(--cube-orange); }
+.card[data-face="blue"]   { --face: var(--cube-blue); }
+.card[data-face="green"]  { --face: var(--cube-green); }
+
+/* Cursor-following wash in the card's face colour; --mx/--my are set in main.js */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    340px circle at var(--mx, 50%) var(--my, 0%),
+    color-mix(in srgb, var(--face) 16%, transparent),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.card:is(:hover, :focus-visible) {
+  border-color: color-mix(in srgb, var(--face) 38%, transparent);
+  background: var(--surface-hover);
+  transform: translateY(-4px);
+}
+
+.card:is(:hover, :focus-visible)::before {
+  opacity: 1;
+}
+
+.card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.card__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #0c0c0e;
+  color: var(--fg);
+  transition: transform 0.5s var(--ease-out);
+}
+
+.card__icon > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card__icon--padded > * {
+  width: 68%;
+  height: 68%;
+  object-fit: contain;
+}
+
+.card:hover .card__icon {
+  transform: rotate(-6deg) scale(1.06);
+}
+
+.card__arrow {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--dim);
+  font-size: 14px;
+  transition:
+    color 0.3s,
+    border-color 0.3s,
+    background-color 0.3s,
+    transform 0.45s var(--ease-out);
+}
+
+.card:hover .card__arrow {
+  border-color: var(--face);
+  background: var(--face);
+  color: var(--bg);
+  transform: translate(2px, -2px);
+}
+
+.card__title {
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.card__text {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 22px;
+}
+
+.card__host {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.3s;
+}
+
+.card:hover .card__host {
+  color: var(--muted);
+}
+
+.tech {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.tech img {
+  width: auto;
+  height: 18px;
+  transition: transform 0.45s var(--ease-out);
+}
+
+.card:hover .tech img {
+  transform: translateY(-2px);
+}
+
+.card:hover .tech li:nth-child(2) img { transition-delay: 40ms; }
+.card:hover .tech li:nth-child(3) img { transition-delay: 80ms; }
+.card:hover .tech li:nth-child(4) img { transition-delay: 120ms; }
+
+/* 8. Footer
+   ========================================================================== */
+.site-footer {
+  margin-top: clamp(64px, 12vh, 120px);
+  padding: 28px 0 40px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* 9. Reveal animation
+   Elements start hidden only when JS is running (html.js) and gain .is-visible
+   from main.js. --i staggers siblings.
+   ========================================================================== */
+.js .reveal {
+  opacity: 0;
+  filter: blur(6px);
+  transform: translateY(18px);
+}
+
+.js .reveal.is-visible {
+  opacity: 1;
+  filter: none;
+  transform: none;
+  transition:
+    opacity 0.8s var(--ease-out),
+    transform 0.8s var(--ease-out),
+    filter 0.8s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+
+.hero > .reveal:nth-child(1) { --i: 1; }
+.hero > .reveal:nth-child(2) { --i: 2; }
+.hero > .reveal:nth-child(3) { --i: 3; }
+.hero > .reveal:nth-child(4) { --i: 4; }
+
+.grid > .reveal:nth-child(3n + 2) { --i: 1; }
+.grid > .reveal:nth-child(3n)     { --i: 2; }
+
+/* 10. Media queries
+   ========================================================================== */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  :root {
+    --gutter: 16px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    min-height: 0;
+  }
+
+  .hero__mark {
+    --ring-inset: 20px;
+    width: 120px;
+    height: 120px;
+  }
+
+  .social {
+    gap: 6px;
+  }
+
+  .social__link {
+    width: 34px;
+    height: 34px;
+  }
+
+  .scramble__label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+
+  .js .reveal {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+}
