@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HUSH Cubing Apps</title>
+  <meta name="description" content="Rubik's Cube and speedcubing projects by Ricky Hu: HUSH Timer, HUSH Keyboard, Cubing TW Notifier, Return Taiwan WCA, Square-1 Cube Shape Helper, and Megaminx Studio.">
+  <meta name="theme-color" content="#09090b">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:title" content="HUSH Cubing Apps">
+  <meta property="og:description" content="Rubik's Cube and speedcubing projects by Ricky Hu.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://apps.ricky-hu.com/">
+  <meta property="og:image" content="https://apps.ricky-hu.com/assets/logo/logo-512.png">
+  <link rel="icon" type="image/png" href="assets/logo/favicon-64.png">
+  <link rel="apple-touch-icon" href="assets/logo/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&family=Rubik:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090b;
+      --surface: #101012;
+      --surface-2: #151518;
+      --line: rgba(255, 255, 255, 0.08);
+      --line-strong: rgba(255, 255, 255, 0.16);
+      --fg: #f4f4f5;
+      --muted: #8e8e96;
+      --dim: #5c5c63;
+      --display: "Rubik", system-ui, sans-serif;
+      --body: "Poppins", system-ui, sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--body);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+    :focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; border-radius: 6px; }
+
+    /* Backdrop: faint sticker grid, fading out from the top */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 56px 56px;
+      background-position: center top;
+      -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 0%, transparent 75%);
+              mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 0%, transparent 75%);
+      opacity: 0.55;
+    }
+    .glow {
+      position: fixed;
+      top: -30vh;
+      left: 50%;
+      width: 90vw;
+      height: 70vh;
+      translate: -50% 0;
+      z-index: -1;
+      pointer-events: none;
+      background: radial-gradient(closest-side, rgba(255, 255, 255, 0.07), transparent);
+      animation: breathe 9s ease-in-out infinite;
+    }
+    @keyframes breathe { 50% { opacity: 0.55; scale: 1.06; } }
+
+    .wrap { width: min(1120px, 100% - 48px); margin-inline: auto; }
+
+    /* Header */
+    header.top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 0;
+    }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 600; letter-spacing: 0.01em; }
+    .brand .tile { width: 30px; border-radius: 8px; box-shadow: none; }
+    /* hover / long-press: HUSH expands into the WCA ID and the logo flips to the WCA mark */
+    .brand { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    .brand-icon { position: relative; display: grid; place-items: center; width: 30px; height: 30px; }
+    .brand .tile, .brand .wca { transition: opacity 0.4s var(--ease), transform 0.6s var(--ease); }
+    .brand .wca { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transform: rotate(-120deg) scale(0.5); }
+    .brand-text { display: inline-flex; align-items: baseline; }
+    .brand .x {
+      display: inline-block;
+      max-width: 0;
+      overflow: hidden;
+      opacity: 0;
+      color: var(--muted);
+      transition: max-width 0.55s var(--ease), opacity 0.4s var(--ease);
+    }
+    .brand.open .x, .brand:focus-visible .x { max-width: 3em; opacity: 1; }
+    .brand.open .tile, .brand:focus-visible .tile { opacity: 0; transform: rotate(120deg) scale(0.5); }
+    .brand.open .wca, .brand:focus-visible .wca { opacity: 1; transform: none; }
+    @media (hover: hover) {
+      .brand:hover .x { max-width: 3em; opacity: 1; }
+      .brand:hover .tile { opacity: 0; transform: rotate(120deg) scale(0.5); }
+      .brand:hover .wca { opacity: 1; transform: none; }
+    }
+    .top nav { display: flex; gap: 8px; }
+    .top nav a {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--muted);
+      transition: color 0.25s, border-color 0.25s, background-color 0.25s, transform 0.45s var(--ease);
+    }
+    .top nav svg { width: 17px; height: 17px; }
+    .top nav a:hover, .top nav a:focus-visible {
+      color: var(--fg);
+      border-color: var(--line-strong);
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+
+    /* Hero */
+    .hero { padding: clamp(40px, 9vh, 96px) 0 clamp(56px, 10vh, 104px); text-align: center; }
+    .mark {
+      position: relative;
+      width: 148px;
+      height: 148px;
+      margin: 0 auto 36px;
+      display: grid;
+      place-items: center;
+    }
+    /* the PNG is cropped to its black tile; the outline behind it is redrawn as animated rings */
+    .tile {
+      position: relative;
+      display: block;
+      width: 62%;
+      aspect-ratio: 1;
+      border-radius: 19%;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 60px rgba(255, 255, 255, 0.08);
+      transition: transform 0.6s var(--ease);
+    }
+    /* cropped well inside the black square so no part of the PNG's own edge or outline can show at the rim */
+    .tile img { position: absolute; width: 175.4%; height: 175.4%; max-width: none; left: -37.7%; top: -37.7%; }
+    .mark:hover .tile { transform: rotate(-8deg) scale(1.05); }
+    .mark i {
+      position: absolute;
+      inset: 26px;
+      rotate: 30deg;
+      border: 1px solid var(--line-strong);
+      border-radius: 26%;
+      animation: spin 28s linear infinite;
+    }
+    .mark i:nth-child(2) { inset: 12px; opacity: 0.55; animation-duration: 44s; animation-direction: reverse; }
+    .mark i:nth-child(3) { inset: -4px; opacity: 0.28; animation-duration: 64s; }
+    @keyframes spin { to { rotate: 390deg; } }
+
+    h1 {
+      margin: 0;
+      font-family: var(--display);
+      font-weight: 700;
+      font-size: clamp(2.5rem, 7.2vw, 5rem);
+      line-height: 1.04;
+      letter-spacing: -0.025em;
+      text-wrap: balance;
+    }
+    h1 span { color: var(--muted); }
+    .lede {
+      max-width: 34rem;
+      margin: 20px auto 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 1.6vw, 1.125rem);
+      text-wrap: pretty;
+    }
+
+    .scramble {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      max-width: 100%;
+      margin-top: 36px;
+      padding: 10px 12px 10px 16px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.03);
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .scramble b { font-weight: 500; color: var(--dim); text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; }
+    .scramble output { color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .scramble button {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.25s, border-color 0.25s, rotate 0.5s var(--ease);
+    }
+    .scramble button:hover { color: var(--fg); border-color: var(--line-strong); rotate: 90deg; }
+
+    /* Section heading */
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 18px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+    h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 1.25rem; letter-spacing: -0.01em; }
+    .section-head span { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+
+    /* Project cards */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; list-style: none; margin: 0; padding: 0; }
+    .card {
+      --face: #f4f4f5;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 260px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--surface);
+      overflow: hidden;
+      isolation: isolate;
+      transition: transform 0.45s var(--ease), border-color 0.35s, background-color 0.35s;
+    }
+    /* cursor-following wash, tinted with the card's cube-face colour */
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--face) 16%, transparent), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .card:hover, .card:focus-visible {
+      transform: translateY(-4px);
+      border-color: color-mix(in srgb, var(--face) 38%, transparent);
+      background: var(--surface-2);
+    }
+    .card:hover::before, .card:focus-visible::before { opacity: 1; }
+
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
+    .icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #0c0c0e;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      transition: transform 0.5s var(--ease);
+    }
+    .icon img, .icon svg { width: 100%; height: 100%; object-fit: cover; }
+    .icon.pad img, .icon.pad svg { width: 68%; height: 68%; object-fit: contain; }
+    .card:hover .icon { transform: rotate(-6deg) scale(1.06); }
+    .arrow {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      color: var(--dim);
+      transition: color 0.3s, border-color 0.3s, background-color 0.3s, transform 0.45s var(--ease);
+    }
+    .card:hover .arrow { color: var(--bg); background: var(--face); border-color: var(--face); transform: translate(2px, -2px); }
+
+    h3 { margin: 0 0 8px; font-family: var(--display); font-weight: 600; font-size: 1.375rem; line-height: 1.2; letter-spacing: -0.01em; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.9375rem; }
+    .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 22px; }
+    .host {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--dim);
+      transition: color 0.3s;
+    }
+    .tech { flex: none; display: flex; align-items: center; gap: 9px; list-style: none; margin: 0; padding: 0; }
+    .tech li { display: flex; }
+    .tech img { width: auto; height: 18px; transition: transform 0.45s var(--ease); }
+    .card:hover .tech img { transform: translateY(-2px); }
+    .card:hover .tech li:nth-child(2) img { transition-delay: 40ms; }
+    .card:hover .tech li:nth-child(3) img { transition-delay: 80ms; }
+    .card:hover .tech li:nth-child(4) img { transition-delay: 120ms; }
+    .card:hover .host { color: var(--muted); }
+
+    /* Footer */
+    footer { margin-top: clamp(64px, 12vh, 120px); padding: 28px 0 40px; border-top: 1px solid var(--line); }
+    .foot { margin: 0; text-align: center; font-size: 14px; color: var(--muted); }
+
+    /* Entrance + scroll reveal (only when JS is running) */
+    .js .reveal { opacity: 0; transform: translateY(18px); filter: blur(6px); }
+    .js .reveal.in {
+      opacity: 1;
+      transform: none;
+      filter: none;
+      transition: opacity 0.8s var(--ease), transform 0.8s var(--ease), filter 0.8s var(--ease);
+      transition-delay: calc(var(--i, 0) * 80ms);
+    }
+
+    @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) {
+      .wrap { width: calc(100% - 32px); }
+      .grid { grid-template-columns: 1fr; }
+      .card { min-height: 0; }
+      .mark { width: 120px; height: 120px; }
+      .mark i { inset: 20px; }
+      .top nav { gap: 6px; }
+      .top nav a { width: 34px; height: 34px; }
+      .scramble b { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; transition-delay: 0s !important; }
+      .js .reveal { opacity: 1; transform: none; filter: none; }
+    }
+  </style>
+  <script>document.documentElement.classList.add("js");</script>
+</head>
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+  <div class="glow" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <header class="top reveal">
+      <a class="brand" id="brand" href="https://www.worldcubeassociation.org/persons/2015HUSH02" target="_blank" rel="noopener" aria-label="HUSH: Ricky Hu's WCA profile, 2015HUSH02">
+        <span class="brand-icon">
+          <span class="tile"><img src="assets/logo/favicon-64.png" alt=""></span>
+          <img class="wca" src="assets/logo/wca.svg" alt="">
+        </span>
+        <span class="brand-text"><span class="x">2015</span>HUSH<span class="x">02</span></span>
+      </a>
+      <nav aria-label="Links">
+        <a href="https://github.com/ricky9667" target="_blank" rel="noopener" aria-label="GitHub" title="GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a>
+        <a href="https://discord.gg/GjfMKprt7q" target="_blank" rel="noopener" aria-label="Discord" title="Discord"><svg viewBox="0 0 256 199" fill="currentColor" aria-hidden="true"><path d="M216.856 16.597A208.502 208.502 0 0 0 164.042 0c-2.275 4.113-4.933 9.645-6.766 14.046-19.692-2.961-39.203-2.961-58.533 0-1.832-4.4-4.55-9.933-6.846-14.046a207.809 207.809 0 0 0-52.855 16.638C5.618 67.147-3.443 116.4 1.087 164.956c22.169 16.555 43.653 26.612 64.775 33.193A161.094 161.094 0 0 0 79.735 175.3a136.413 136.413 0 0 1-21.846-10.632 108.636 108.636 0 0 0 5.356-4.237c42.122 19.702 87.89 19.702 129.51 0a131.66 131.66 0 0 0 5.355 4.237 136.07 136.07 0 0 1-21.886 10.653c4.006 8.02 8.638 15.67 13.873 22.848 21.142-6.58 42.646-16.637 64.815-33.213 5.316-56.288-9.08-105.09-38.056-148.36ZM85.474 135.095c-12.645 0-23.015-11.805-23.015-26.18s10.149-26.2 23.015-26.2c12.867 0 23.236 11.804 23.015 26.2.02 14.375-10.148 26.18-23.015 26.18Zm85.051 0c-12.645 0-23.014-11.805-23.014-26.18s10.148-26.2 23.014-26.2c12.867 0 23.236 11.804 23.015 26.2 0 14.375-10.148 26.18-23.015 26.18Z"/></svg></a>
+        <a href="https://instagram.com/hush_cubing_apps" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="0.6" fill="currentColor"/></svg></a>
+        <a href="https://www.buymeacoffee.com/ricky9667" target="_blank" rel="noopener" aria-label="Buy me a coffee" title="Buy me a coffee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h12v6a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5V9Z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8.5 3v2.5M12 3v2.5"/></svg></a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="mark reveal" style="--i:1" aria-hidden="true">
+          <i></i><i></i><i></i>
+          <span class="tile"><img src="assets/logo/logo-512.png" alt=""></span>
+        </div>
+        <h1 class="reveal" style="--i:2">HUSH <span>Cubing Apps</span></h1>
+        <p class="lede reveal" style="--i:3">Apps and tools for Rubik's Cube and speedcubing, built by Ricky Hu.</p>
+        <div class="scramble reveal" style="--i:4">
+          <b>Scramble</b>
+          <output id="scramble" aria-live="off">R U R' U' F2 D L' B2 U R2</output>
+          <button type="button" id="rescramble" aria-label="New scramble">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <section id="apps" aria-labelledby="apps-title">
+        <div class="section-head reveal">
+          <h2 id="apps-title">Apps</h2>
+          <span>06 projects</span>
+        </div>
+
+        <ul class="grid">
+          <li class="reveal" style="--i:0">
+            <a class="card" style="--face:#f4f4f5" href="https://hushtimer.app/" target="_blank" rel="noopener">
+              <div class="card-top">
+                <div class="icon"><img src="https://hushtimer.app/logo.png" alt="" loading="lazy"></div>
+                <span class="arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></span>
+              </div>
+              <h3>HUSH Timer</h3>
+              <p>A modern, feature-rich cubing timer built for 1v1 battles.</p>
+              <div class="card-foot">
+                <span class="host">hushtimer.app</span>
+                <ul class="tech" aria-label="Built with"><li><img src="assets/tech/android.svg" alt="Android" title="Android"></li><li><img src="assets/tech/ios.svg" alt="iOS" title="iOS"></li><li><img src="assets/tech/kotlin.svg" alt="Kotlin" title="Kotlin"></li></ul>
+              </div>
+            </a>
+          </li>
+
+          <li class="reveal" style="--i:1">
+            <a class="card" style="--face:#f2d04b" href="https://apps.ricky-hu.com/HushKeyboard/" target="_blank" rel="noopener">
+              <div class="card-top">
+                <div class="icon"><img src="https://apps.ricky-hu.com/HushKeyboard/assets/icon.png" alt="" loading="lazy"></div>
+                <span class="arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></span>
+              </div>
+              <h3>HUSH Keyboard</h3>
+              <p>A Rubik's Cube notation keyboard. Type primes, double turns, and wide moves without switching layouts.</p>
+              <div class="card-foot">
+                <span class="host">apps.ricky-hu.com/HushKeyboard</span>
+                <ul class="tech" aria-label="Built with"><li><img src="assets/tech/android.svg" alt="Android" title="Android"></li><li><img src="assets/tech/kotlin.svg" alt="Kotlin" title="Kotlin"></li></ul>
+              </div>
+            </a>
+          </li>
+
+          <li class="reveal" style="--i:2">
+            <a class="card" style="--face:#ef5b54" href="https://apps.ricky-hu.com/cubing-tw-notifier/" target="_blank" rel="noopener">
+              <div class="card-top">
+                <div class="icon"><img src="https://apps.ricky-hu.com/cubing-tw-notifier/assets/icon.png" alt="" loading="lazy"></div>
+                <span class="arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></span>
+              </div>
+              <h3>Cubing TW Notifier</h3>
+              <p>Get notified about Taiwan cubing competitions the moment they are announced or open for registration.</p>
+              <div class="card-foot">
+                <span class="host">apps.ricky-hu.com/cubing-tw-notifier</span>
+                <ul class="tech" aria-label="Built with"><li><img src="assets/tech/kotlin.svg" alt="Kotlin" title="Kotlin"></li><li><img src="assets/tech/spring.svg" alt="Spring" title="Spring"></li><li><img src="assets/tech/discord.svg" alt="Discord" title="Discord"></li><li><img src="assets/tech/telegram.svg" alt="Telegram" title="Telegram"></li></ul>
+              </div>
+            </a>
+          </li>
+
+          <li class="reveal" style="--i:0">
+            <a class="card" style="--face:#f59a3d" href="https://apps.ricky-hu.com/return-tw-wca/" target="_blank" rel="noopener">
+              <div class="card-top">
+                <div class="icon"><img src="https://apps.ricky-hu.com/return-tw-wca/assets/icon.svg" alt="" loading="lazy"></div>
+                <span class="arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></span>
+              </div>
+              <h3>Return Taiwan WCA</h3>
+              <p>Brings Taiwan's name and flag back to WCA and WCA Live pages, for Chrome and Firefox.</p>
+              <div class="card-foot">
+                <span class="host">apps.ricky-hu.com/return-tw-wca</span>
+                <ul class="tech" aria-label="Built with"><li><img src="assets/tech/chrome.svg" alt="Chrome" title="Chrome"></li><li><img src="assets/tech/firefox.svg" alt="Firefox" title="Firefox"></li></ul>
+              </div>
+            </a>
+          </li>
+
+          <li class="reveal" style="--i:1">
+            <a class="card" style="--face:#5a9cf2" href="https://ricky9667.notion.site/Template-SQ1-1aed11966c8780e09405cbdac16f5a3c" target="_blank" rel="noopener">
+              <div class="card-top">
+                <div class="icon pad">
+                  <!-- Square-1, top layer -->
+                  <svg viewBox="0 0 48 48" fill="none" stroke="#f4f4f5" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="6" y="6" width="36" height="36" rx="2"/>
+                    <path d="M24 24 17.6 6M24 24 6 17.6M24 24 30.4 42M24 24 42 30.4M24 24 30.4 6M24 24 6 30.4M24 24 17.6 42M24 24 42 17.6" stroke-width="1.6"/>
+                  </svg>
+                </div>
+                <span class="arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></span>
+              </div>
+              <h3>Square-1 Cube Shape Helper</h3>
+              <p>A Notion template to help you learn and track Square-1 cube shape cases.</p>
+              <div class="card-foot">
+                <span class="host">ricky9667.notion.site</span>
+                <ul class="tech" aria-label="Built with"><li><img src="assets/tech/notion.svg" alt="Notion" title="Notion"></li></ul>
+              </div>
+            </a>
+          </li>
+
+          <li class="reveal" style="--i:2">
+            <a class="card" style="--face:#4fcf8b" href="https://apps.ricky-hu.com/megaminx-studio/" target="_blank" rel="noopener">
+              <div class="card-top">
+                <div class="icon pad"><img src="https://apps.ricky-hu.com/megaminx-studio/favicon.svg" alt="" loading="lazy"></div>
+                <span class="arrow" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></span>
+              </div>
+              <h3>Megaminx Studio</h3>
+              <p>Color individual Megaminx stickers and export a clean SVG. Free, and runs entirely in your browser.</p>
+              <div class="card-foot">
+                <span class="host">apps.ricky-hu.com/megaminx-studio</span>
+                <ul class="tech" aria-label="Built with"><li><img src="assets/tech/react.svg" alt="React" title="React"></li></ul>
+              </div>
+            </a>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      <p class="foot">Ricky Hu © <span id="year">2026</span></p>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      document.getElementById("year").textContent = new Date().getFullYear();
+
+      // Reveal on load / scroll
+      var items = document.querySelectorAll(".reveal");
+      if ("IntersectionObserver" in window && !reduce) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+          });
+        });
+        items.forEach(function (el) { io.observe(el); });
+      } else {
+        items.forEach(function (el) { el.classList.add("in"); });
+      }
+
+      // Header brand: on touch, a long press expands it; once expanded, a tap opens the WCA profile
+      var brand = document.getElementById("brand");
+      var pressTimer = null, touch = false, justOpened = false;
+      function cancelPress() { clearTimeout(pressTimer); }
+      brand.addEventListener("pointerdown", function (e) {
+        touch = e.pointerType !== "mouse";
+        justOpened = false;
+        if (!touch || brand.classList.contains("open")) return;
+        pressTimer = setTimeout(function () { brand.classList.add("open"); justOpened = true; }, 450);
+      });
+      ["pointerup", "pointercancel", "pointerleave"].forEach(function (t) { brand.addEventListener(t, cancelPress); });
+      brand.addEventListener("contextmenu", function (e) { if (touch) e.preventDefault(); });
+      brand.addEventListener("click", function (e) {
+        if (touch && (justOpened || !brand.classList.contains("open"))) e.preventDefault();
+        justOpened = false;
+      });
+      document.addEventListener("pointerdown", function (e) {
+        if (!brand.contains(e.target)) brand.classList.remove("open");
+      });
+
+      // Cursor-following wash on cards
+      document.querySelectorAll(".card").forEach(function (card) {
+        card.addEventListener("pointermove", function (e) {
+          var r = card.getBoundingClientRect();
+          card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+          card.style.setProperty("--my", (e.clientY - r.top) + "px");
+        });
+      });
+
+      // Random 3x3 scramble: no repeated face, no three moves in a row on one axis
+      var FACES = ["U", "D", "R", "L", "F", "B"];
+      var MODS = ["", "'", "2"];
+      function scramble(n) {
+        var out = [], last = -1, prev = -1;
+        while (out.length < n) {
+          var f = Math.floor(Math.random() * 6);
+          if (f === last) continue;
+          if (prev !== -1 && (f >> 1) === (last >> 1) && (f >> 1) === (prev >> 1)) continue;
+          out.push(FACES[f] + MODS[Math.floor(Math.random() * 3)]);
+          prev = last; last = f;
+        }
+        return out;
+      }
+
+      var el = document.getElementById("scramble");
+      var timer = null;
+      function show() {
+        var n = window.innerWidth < 600 ? 10 : 20;
+        var target = scramble(n);
+        clearInterval(timer);
+        if (reduce) { el.textContent = target.join(" "); return; }
+        // settle move by move, left to right, while the rest keeps shuffling
+        var settled = 0, tick = 0;
+        timer = setInterval(function () {
+          tick++;
+          if (tick % 2 === 0) settled++;
+          var noise = scramble(n);
+          el.textContent = target.map(function (m, i) { return i < settled ? m : noise[i]; }).join(" ");
+          if (settled >= n) clearInterval(timer);
+        }, 35);
+      }
+      show();
+      document.getElementById("rescramble").addEventListener("click", show);
+    })();
+  </script>
+</body>
+</html>
